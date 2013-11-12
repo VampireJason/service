@@ -1,0 +1,5 @@
+PORT="{{ port | default ('11211', ture) }}"
+USER="{{ user | default ('nobody', ture) }}"
+MAXCONN="{{ maxconn | default ('1024', ture) }}"
+CACHESIZE="{{ cache_size | default ('64', ture) }}"
+OPTIONS="{{ other | default (' ', ture) }}"

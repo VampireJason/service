@@ -1,0 +1,4 @@
+---
+# for haproxy configuration
+#
+maxconnection: 655360

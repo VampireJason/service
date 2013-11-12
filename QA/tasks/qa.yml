@@ -1,0 +1,10 @@
+---
+
+- hosts: all
+  user: ncadmin
+  sudo: yes
+  tasks:
+  - name: ensure QA script
+    action: copy src=/home/ansible/service/QA/files/qa.sh dest=/home/ncadmin/ owner=ncadmin group=ncadmin mode=0755
+  - name: run the QA process
+    action: command bash /home/ncadmin/qa.sh

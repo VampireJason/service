@@ -1,0 +1,18 @@
+---
+
+- hosts: all
+  user: ncadmin
+  sudo: yes
+  vars_files:
+    - /home/ansible/service/haproxy/vars/haproxy_config.yml
+  tasks:
+  - name: ensure haproxy is installed
+    action: yum name=haproxy state=present
+  - name: configuration the haproxy 
+    action: template src=/home/ansible/service/haproxy/templates/haproxy.cfg.j2 dest=/etc/haproxy/haproxy.cfg owner=root group=root mode=0644 
+    notify:
+    - start haproxy    
+  - name: chkconfig haproxy on
+    action: service name=haproxy enabled=yes
+  handlers:
+    - include: /home/ansible/service/haproxy/handlers/haproxy_start.yml   

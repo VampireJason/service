@@ -1,0 +1,252 @@
+# Rewrite example.com -> www.example.com. Works for both http and https
+#server {
+#  listen 80;
+#  server_name = DOMAIN;
+#  rewrite ^ $scheme://DOMAIN$request_uri;
+#}
+
+server {
+  ################################
+  # START BASIC CONFIG           #
+  ################################
+  listen 80;
+  server_name    {{ item  | default ('localhost') }};
+
+  access_log   /var/log/nginx/{{ item | default ('localhost') }}/{{ item | default ('localhost') }}-access.log main;
+  error_log   /var/log/nginx/{{ item | default ('localhost') }}/{{ item | default ('localhost') }}-error.log;
+  #error_log    /var/log/nginx/example.com/DOMAIN-error.log notice;
+
+  # This will print rewrite logs to the error log. The error log needs to be
+  # set to 'notice' for this to work.
+  rewrite_log off;
+
+  # Setup document root. Should not be set inside location {}'s if you do not
+  # have too
+  root /var/www/sites/{{ item | default ('localhost') }}/;
+
+  # Change 500 error page to something a little more pretty
+  error_page   502 503 504  /50x.html;
+  location = /50x.html {
+    root /usr/share/nginx/html/;
+  }
+
+  # Setup index order.
+  index index.php index.html index.htm;
+
+
+  # php pages handling
+  location ~ \.php$ {
+    # try_files           - This used to change prevent a nasty PHP-FPM -
+    #                       proxy_pass bug. nly works if php is on the same
+    #                       machine.
+    # fastcgi_pass        - Can be set to use file, or network connection (local
+    #                       or remote)
+    # fastcgi_buffer_size - This directive sets the buffer size for reading the
+    #                       header of the backend FastCGI process. By default,
+    #                       the buffer size is equal to the size of one buffer
+    #                       in fastcgi_buffers.
+    # fastcgi_buffers     - Total memory ceiling =
+    #                       (fastcgi_buffers_var1 * fastcgi_buffers_var2 * worker_connectsion)
+    #                       Default value is (64 x 256k x 1024) = 16GB.
+    #                       Adjusted for sanity reasons. Should be set to
+    #                       average fastcgi response size. If response size
+    #                       exceeds buffers, the remainder goes to disk.
+    #                       This setting is per connection. It's best to have
+    #                       fewer buffers, with larger size (less OS overhead)
+    #                       Suggestion: "64 (average_page_size)"
+    # inc fastcgi_params  - Load default fastcgi_param's from file
+    # tcp_nopush          - This option can only be used or is acknowledged
+    #                       when 'sendfile' is on, usually inherited from http {}
+
+    try_files $uri      = 404;
+    #fastcgi_pass              unix:/tmp/php-fpm.sock;
+    fastcgi_pass              127.0.0.1:9000;
+    fastcgi_buffer_size       128k;
+    fastcgi_buffers           64 128k;
+    fastcgi_intercept_errors  on;
+    fastcgi_param             SCRIPT_FILENAME  $document_root$fastcgi_script_name;
+    include                   fastcgi_params;
+
+    # PHP tuning.
+    # tcp_nopush can add milliseconds to latency when pushing from a cache.
+    #tcp_nopush          off;
+    #keepalive_requests  0;
+  }
+
+  # Block access to hidden files
+  location ~ /\. {
+    deny all;
+    access_log off;
+    log_not_found off;
+  }
+
+  location = /favicon.ico {
+    log_not_found off;
+    access_log off;
+  }
+
+  location = /robots.txt {
+    allow all;
+    log_not_found off;
+    access_log off;
+  }
+
+  location ~* \.(js|css|png|jpg|jpeg|gif|ico)$ {
+    expires {{ expire_values | default ('30d') }};
+  }
+
+
+  ################################
+  # END BASIC CONFIG             #
+  ################################
+
+  ################################
+  # START CONFIG EXAMPLES        #
+  ################################
+  # - Set up a reverse proxy to send all request for /admin to localhost:8080
+  #location ~ ^/admin {
+  #  proxy_pass        http://localhost:8080;
+  #  proxy_set_header  X-Real-IP  $remote_addr;
+  #  proxy_set_header  Host $host;
+  #}
+
+  # - Set expires on css/js to 1 year
+  #location ~* (.*).(css|js|css$|js$) {
+  #  expires 1y;
+  #  break;
+  #}
+
+  # - Password protect specific directory
+  #location /eaccel {
+  #  auth_basic "Restricted";
+  #  auth_basic_user_file  /etc/nginx/conf.d/wufantuan_pass;
+  #}
+
+}
+
+################################
+# START SSL CONFIG             #
+################################
+#server {
+#  ################################
+#  # START BASIC CONFIG           #
+#  ################################
+#  listen 443 ssl;
+#  server_name     DOMAIN;
+
+#  ssl_certificate      /etc/nginx/ssl/DOMAIN.crt;
+#  ssl_certificate_key  /etc/nginx/ssl/DOMAIN.nopass.key;
+#  ssl_protocols  SSLv3 TLSv1;
+#  ssl_prefer_server_ciphers on;
+#  ssl_ciphers  RC4-SHA:HIGH:!ADH;
+
+#  access_log   /var/log/nginx/DOMAIN/DOMAIN-access.log;
+#  error_log   /var/log/nginx/DOMAIN/DOMAIN-error.log;
+
+#  # This will print rewrite logs to the error log. There error log needs to be
+#  # set to 'notice' for this to work.
+#  rewrite_log off;
+
+#  root /var/www/sites/DOMAIN/;
+
+  # Change 500 error page to something a little more pretty
+#  error_page   502 503 504  /50x.html;
+#  location = /50x.html {
+#    root /usr/share/nginx/html/;
+#  }
+
+
+#  index index.php index.html index.htm;
+
+
+  # php pages handling
+#  location ~ \.php$ {
+    # try_files           - This used to change prevent a nasty PHP-FPM -
+    #                       proxy_pass bug. nly works if php is on the same
+    #                       machine.
+    # fastcgi_pass        - Can be set to use file, or network connection (local
+    #                       or remote)
+    # fastcgi_buffer_size - This directive sets the buffer size for reading the
+    #                       header of the backend FastCGI process. By default,
+    #                       the buffer size is equal to the size of one buffer
+    #                       in fastcgi_buffers.
+    # fastcgi_buffers     - Total memory ceiling =
+    #                       (fastcgi_buffers_var1 * fastcgi_buffers_var2 * worker_connectsion)
+    #                       Default value is (64 x 256k x 1024) = 16GB.
+    #                       Adjusted for sanity reasons. Should be set to
+    #                       average fastcgi response size. If response size
+    #                       exceeds buffers, the remainder goes to disk.
+    #                       This setting is per connection. It's best to have
+    #                       fewer buffers, with larger size (less OS overhead)
+    #                       Suggestion: "64 (average_page_size)"
+    # inc fastcgi_params  - Load default fastcgi_param's from file
+    # tcp_nopush          - This option can only be used or is acknowledged
+    #                       when 'sendfile' is on, usually inherited from http {}
+
+#    try_files                 $uri = 404;
+     #fastcgi_pass              unix:/tmp/php-fpm.sock;
+#    fastcgi_pass              127.0.0.1:9000;
+#    fastcgi_buffer_size       128k;
+#    fastcgi_buffers           64 128k;
+#    fastcgi_intercept_errors  on;
+#    fastcgi_param             SCRIPT_FILENAME  $document_root$fastcgi_script_name;
+#    include                   fastcgi_params;
+
+    # PHP tuning.
+    # tcp_nopush can add milliseconds to latency when pushing from a cache.
+    #tcp_nopush          off;
+    #keepalive_requests  0;
+#  }
+
+  # Block access to hidden files
+#  location ~ /\. {
+#    deny all;
+#    access_log off;
+#    log_not_found off;
+#  }
+
+#  location = /favicon.ico {
+#    log_not_found off;
+#    access_log off;
+#  }
+
+#  location = /robots.txt {
+#    allow all;
+#    log_not_found off;
+#    access_log off;
+#  }
+
+#  location ~* \.(js|css|png|jpg|jpeg|gif|ico)$ {
+#    expires 30d;
+#  }
+
+
+
+#  ################################
+#  # END BASIC CONFIG             #
+#  ################################
+
+#  ################################
+#  # START CONFIG EXAMPLES        #
+#  ################################
+
+  # - Set up a reverse proxy to send all request for /admin to localhost:8080
+#  #location ~ ^/admin {
+#  #  proxy_pass        http://localhost:8080;
+#  #  proxy_set_header  X-Real-IP  $remote_addr;
+#  #  proxy_set_header  Host $host;
+#  #}
+
+  # - Set expires on css/js to 1 year
+#  #location ~* (.*).(css|js|css$|js$) {
+#  #  expires 1y;
+#  #  break;
+#  #}
+
+  # - Password protect specific directory
+#  #location /eaccel {
+#  #  auth_basic "Restricted";
+#  #  auth_basic_user_file  /etc/nginx/conf.d/wufantuan_pass;
+#  #}
+
+#}

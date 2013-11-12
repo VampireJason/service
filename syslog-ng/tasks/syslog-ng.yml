@@ -1,0 +1,12 @@
+---
+
+- hosts: all
+  user: ncadmin
+  sudo: yes
+  tasks:
+  - name: ensure syslog-ng confuguration
+    action: template src=/home/ansible/service/syslog-ng/files/syslog-ng.conf dest=/etc/syslog-ng/syslog-ng.conf owner=root group=root mode=0644
+    notify: restart syslog-ng
+  handlers:
+  - name: restart syslog-ng
+    action: service name=syslog-ng state=restarted

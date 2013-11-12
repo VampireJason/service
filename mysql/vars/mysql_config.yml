@@ -1,0 +1,15 @@
+---
+# for mysql configuration
+
+mysql_size: 5120
+vgname: domuvg
+lvname: mysql
+fstype: ext4
+devname: /dev/domuvg/mysql
+mysql_data: data
+innodb_buffer_pool_size: 64M
+root_pass: Cflzx3kc
+ncdba_pass: Cflzx3kc
+nccheckdb_pass: Cflzx3kc
+ncbackupdb_pass: Cflzx3kc
+

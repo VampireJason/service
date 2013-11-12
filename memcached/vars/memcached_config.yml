@@ -1,0 +1,9 @@
+---
+
+# config memcache
+
+port: 11211
+#user:
+#maxconn:
+cache_size: 128
+#other:

@@ -1,0 +1,119 @@
+user  nginx;
+
+# worker_process       - in general should be set to # of CPU's. This can be
+#                        increased if disk I/O is high.
+# worker_rlimit_nofile - specifies how many open file handles are allowed per
+#                        worker. Since all tcp connections are file handles
+#                        (descriptors) on *nix systems, worker_rlimit_nofile
+#                        must be greater than worker_connections.
+#                        (worker_processes * woker_connections)
+worker_processes {{ worker_count | default ('4') }};
+worker_rlimit_nofile 8192;
+
+events {
+  # worker_connections - specifies how many network connections a worker is
+  #                      allowed to maintain. should be less then
+  #                      work_rlimit_nofile (max clients = worker_connections
+  #                      * worker_processes)
+  # use epoll          - is default for linux, but should be specifed just in
+  #                      case. More efficient then select().
+  worker_connections {{ worker_connections | default ('2048') }};
+  use epoll;
+}
+
+error_log   /var/log/nginx/error.log;
+pid         /var/run/nginx.pid;
+
+http {
+  include       /etc/nginx/mime.types;
+  default_type  application/octet-stream;
+
+  log_format  main  '$remote_addr - $remote_user [$time_local] "$request" '
+                    '$status $body_bytes_sent "$http_referer" '
+                    '"$http_user_agent" "$http_x_forwarded_for"';
+
+  log_format timing  '$remote_addr - $remote_user [$time_local]  $request '
+                     'upstream_http_content_type: $upstream_http_content_type'
+                     'upstream_response_time: $upstream_response_time '
+                     'request_time: $request_time';
+
+
+  access_log  /var/log/nginx/access.log  main;
+  error_log   /var/log/nginx/error.log;
+
+  # sendfile        - It is generally used for larger files (such as images)
+  #                   which do not need use of a multiple request/confirmation
+  #                   system to be served - thus freeing resources for items
+  #                   that do need that level of 'supervision' from Nginx.
+  # tcp_nodelay     - This is useful for prepending headers before calling
+  #                   sendfile(2), or for throughput optimization.
+  # tcp_nopush      - Sends the HTTP response headers in one packet. Might need
+  #                   to disable for php (inside location block). Note that this
+  #                    option only applies if the sendfile directive is enabled.
+  # server_tokens   - Hides nginx version
+  # limit_zone      - Directive describes the zone, in which the session states
+  #                   are stored. To be used with limit_conn in side server{}
+  # gzip            - GZIP enable by default, should be configured and adjusted
+  #                   inside of server {}
+  # gzip_disable    - Disable for MSIE <= ver 6
+  # gzip_static     - will send .gz if present
+  # gzip_comp_level - 1 - 9
+  # gzip_vary       - Tells upstream caching engines to handle accordingly.
+  #                   upstream cachine engines might accidently send gzip'd
+  #                   files to MSIE 6 browsers.
+  # gzip_min_length - Don't waste CPU cycles unless it's worth it.
+
+  sendfile           on;
+  tcp_nopush         on;
+  tcp_nodelay        on;
+  server_tokens      off;
+  gzip               {{ gzip_compression | default ('on') }};
+  gzip_types         text/plain text/css
+                     application/x-javascript text/xml
+                     application/xml application/xml+rss
+                     text/javascript;
+  gzip_disable       "MSIE [1-6].(?!.*SV1)";
+  gzip_static        on;
+  gzip_vary          on;
+  gzip_comp_level    2;
+  gzip_min_length    1024;
+  gzip_buffers       16 8k;
+  keepalive_timeout  {{ keepalive_timeout | default ('60') }};
+
+  client_max_body_size 4m;
+
+  # Sample Rate limit to 10r/sec. Needs to be applied in server {} or
+  # location {}
+  #limit_req_zone  $binary_remote_addr  zone=myzone:10m   rate=10r/s;
+
+  # Load config files from the /etc/nginx/conf.d/ directory
+  include /etc/nginx/conf.d/*.conf;
+
+
+  # Default server {}
+  server {
+    # Rate limit default server. If a custom vhost does not define an IP as a
+    # server_name, this server {} will be used. Need to limit access to this
+    # vhost.
+    # 'server_name _;' is a catchall. Any domain or IP not specifically defined
+    # by another virtualhost, will be caught by this server_name
+    server_name  _;
+
+    location / {
+      root   /var/www/html;
+      index  index.html index.htm;
+    }
+
+    # redirect 404 pages to the static page /404.html
+    error_page  404              /404.html;
+    location = /404.html {
+      root   /usr/share/nginx/html;
+    }
+
+    # redirect server error pages to the static page /50x.html
+    error_page   500 502 503 504  /50x.html;
+    location = /50x.html {
+      root   /usr/share/nginx/html;
+    }
+  }
+}

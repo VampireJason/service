@@ -1,0 +1,28 @@
+---
+
+- hosts: all
+  user: ncadmin
+  sudo: yes
+  vars_files:
+    - /home/ansible/service/redis/vars/redis_config.yml
+  tasks:
+  - name: copy repo to dest server
+    action: copy src=/home/ansible/service/redis/files/alt.repo dest=/etc/yum.repos.d/alt.repo owner=root group=root mode=0644
+  - name: create lvm for redis
+    action: lvol vg=${vgname} lv=${lvname} size=${redis_size} state=present
+  - name: ensure redis folder
+    action: file dest=/var/lib/redis owner=root group=root state=directory
+  - name: make filesystem for redis
+    action: filesystem fstype=${fstype} dev=${devname}
+  - name: mount redis root folder
+    action: mount name=/var/lib/redis src=${devname} fstype=${fstype} state=mounted
+  - name: ensure redis is installed
+    action: yum name=redis state=present
+  - name: configuration the redis 
+    action: template src=/home/ansible/service/redis/templates/redis.conf.j2 dest=/etc/redis.conf owner=root group=root mode=0644 
+    notify:
+    - start redis    
+  - name: chkconfig redis on
+    action: service name=redis enabled=yes
+  handlers:
+    - include: /home/ansible/service/redis/handlers/redis_start.yml   

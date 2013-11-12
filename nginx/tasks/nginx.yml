@@ -1,0 +1,80 @@
+---
+- name: create lvm for nginx
+  lvol: 
+    vg=${vgname} 
+    lv=${lvname} 
+    size=${nginx_size} 
+    state=present
+- name: ensure nginx root folder
+  file: 
+    dest=/var/${nginx_root} 
+    owner=root 
+    group=root 
+    state=directory
+- name: make filesystem for nginx
+  filesystem: 
+    fstype=${fstype} 
+    dev=${devname}
+- name: mount nginx root folder
+  mount: 
+    name=/var/${nginx_root} 
+    src=${devname} 
+    fstype=${fstype} 
+    state=mounted
+- name: ensure nginx is installed
+  yum: 
+    name=nginx 
+    state=present
+- name: ensure nginx configuration
+  template: 
+    src=/home/ansible/service/nginx/templates/nginx.conf.j2 
+    dest=/etc/nginx/nginx.conf 
+    owner=root 
+    group=root 
+    mode=0644
+- name: ensure nginx vhost configuration
+  template: 
+    src=/home/ansible/service/nginx/templates/www.example.com.j2 
+    dest=/etc/nginx/conf.d/${item}.conf 
+    owner=root 
+    group=root 
+    mode=0644
+  with_items:
+    ${domains}
+- name: ensure nginx monitoring configuration
+  copy: 
+    src=/home/ansible/service/nginx/files/zabbix.conf 
+    dest=/etc/nginx/conf.d/ 
+    owner=root 
+    group=root 
+    mode=0644
+- name: ensure zabbix vhost log folder and create zabbix log folder
+  file: 
+    dest=/var/log/nginx/${zabbix} 
+    owner=root 
+    group=root 
+    state=directory
+- name: ensure vhost log folder and create log folder
+  file: 
+    dest=/var/log/nginx/${item}
+    owner=root 
+    group=root 
+    state=directory
+  with_items:
+    ${domains}
+- name: ensure vhost data folder and create data folder
+  file: 
+    dest=/var/www/sites/${item}
+    owner=root 
+    group=root 
+    state=directory
+  with_items:
+    ${domains}
+- name: start nginx
+  service:
+    name=nginx
+    state=started
+- name: chkconfig nginx on
+  service:
+    name=nginx 
+    enabled=yes

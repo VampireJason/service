@@ -1,0 +1,20 @@
+---
+# for php configuration
+
+max_execution_time: 30
+max_input_time: 60
+memory_limit: 32M
+safe_mode_gid: "Off"
+post_max_size: 8M
+upload_max_filesize: 2M
+save_handler: files
+
+# for php-fpm configuration
+
+process_user: nginx
+process_group: nginx
+pm_style: static
+max_children: 8
+max_requests: 4000
+request_slowlog_timeout: 5s
+

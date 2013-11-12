@@ -1,0 +1,15 @@
+#!/usr/bin/expect
+
+set timeout 5
+
+spawn bash /home/ncadmin/access.sh
+
+expect "PUBLIC"
+
+send "wget -O - -q --timeout=8 --user-agent='Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 5.1; .NET CLR 2.0.50727; InfoPath.1; .NET CLR 1.1.4322)' http://www.mon-ip.com | awk '/var Ip =/ {print $NF}'\r"
+
+expect "SSH"
+
+send "22\r"
+
+interact

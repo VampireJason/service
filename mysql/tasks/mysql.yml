@@ -1,0 +1,59 @@
+---
+
+- hosts: all
+  user: ncadmin
+  vars_files:
+    - /home/ansible/service/mysql/vars/mysql_config.yml
+  sudo: yes
+  tasks:
+  - name: create lvm for mysql
+    action: lvol vg=${vgname} lv=${lvname} size=${mysql_size} state=present
+  - name: ensure mysql folder
+    action: file dest=/var/lib/mysql owner=root group=root state=directory
+  - name: make filesystem for mysql
+    action: filesystem fstype=${fstype} dev=${devname}
+  - name: mount mysql root folder
+    action: mount name=/var/lib/mysql src=${devname} fstype=${fstype} state=mounted
+  - name: remove old mysql shared
+    action: yum name=MySQL-shared-compat state=absent
+  - name: ensure percona installed
+    action: yum name=$item state=present
+    with_items:
+        - Percona-Server-server-55.x86_64
+        - Percona-Server-shared-55.x86_64
+        - Percona-Server-shared-compat.x86_64
+        - Percona-Server-client-55.x86_64
+  - name: change onwer for mysql folder
+    action: file dest=/var/lib/mysql owner=mysql group=mysql state=directory
+  - name: ensure percona configuration
+    action: template src=/home/ansible/service/mysql/templates/my.cnf.j2 dest=/etc/my.cnf owner=root group=root mode=0644
+  - name: remove older data
+    action: command rm -rf /var/lib/mysql/$item
+    with_items:
+        - mysql
+        - test
+        - lost+found
+        - performance_schema
+  - name: create mysql data folder
+    action: file dest=/var/lib/mysql/${mysql_data} owner=mysql group=mysql state=directory
+  - name: create new data
+    action: command mysql_install_db
+#    notify:
+#    - start mysql
+  - name: start mysql
+    action: service name=mysql state=started
+  - name: chkconfig mysql on
+    action: service name=mysql enabled=yes
+  - name: ensure mysql python installed
+    action: yum name=MySQL-python.x86_64 state=present
+  - name: set up root pass for mysql
+    action: mysql_user name=root password=${root_pass} state=present
+  - name: create ncdba user for mysql
+    action: mysql_user login_user=root login_password=${root_pass} name=ncdba password=${ncdba_pass} priv=*.*:ALL state=present
+  - name: create nccheckdb user for mysql
+    action: mysql_user login_user=root login_password=${root_pass} name=nccheckdb password=${nccheckdb_pass} priv=*.*:PROCESS,REPLICATION\ CLIENT,SELECT state=present
+  - name: create ncbackupdb user for mysql
+    action: mysql_user login_user=root login_password=${root_pass} name=ncbackupdb password=${ncbackupdb_pass} priv=*.*:LOCK\ TABLES,SELECT,SHOW\ DATABASES,RELOAD,EVENT state=present
+  handlers:
+    - include: /home/ansible/service/mysql/handlers/mysql_start.yml
+

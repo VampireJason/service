@@ -1,0 +1,18 @@
+---
+
+- hosts: all
+  user: ncadmin
+  sudo: yes
+  vars_files:
+    - /home/ansible/service/memcached/vars/memcached_config.yml
+  tasks:
+  - name: ensure memcached is installed
+    action: yum name=memcached state=present
+  - name: config memcache
+    action: template src=/home/ansible/service/memcached/templates/memcached.j2 dest=/etc/sysconfig/memcached owner=root group=root mode=0644
+    notify:
+    - start memcached
+  - name: chkconfig memcached on
+    action: service name=memcached enabled=yes
+  handlers:
+    - include: /home/ansible/service/memcached/handlers/memcached_start.yml

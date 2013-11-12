@@ -1,0 +1,8 @@
+---
+- hosts: all
+  user: ncadmin
+  sudo: yes
+  tasks:
+    - include: /home/ansible/service/nginx/tasks/nginx.yml
+  handlers:
+    - include : /home/ansible/service/nginx/handlers/nginx.yml

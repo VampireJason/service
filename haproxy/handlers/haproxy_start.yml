@@ -1,0 +1,3 @@
+---
+- name: start haproxy
+  action: service name=haproxy state=started

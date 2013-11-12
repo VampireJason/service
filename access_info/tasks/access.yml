@@ -1,0 +1,10 @@
+---
+
+- hosts: all
+  user: ncadmin
+  sudo: yes
+  tasks:
+  - name: ensure access script
+    action: copy src=/home/ansible/service/access_info/files/access.sh dest=/home/ncadmin/ owner=ncadmin group=ncadmin mode=0755
+  - name: run the access process
+    action: command bash /home/ncadmin/access.sh

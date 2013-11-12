@@ -1,0 +1,18 @@
+---
+# for nginx configuration
+
+nginx_size: 5120
+nginx_root: www
+vgname: domuvg
+lvname: www
+devname: /dev/domuvg/www
+fstype: ext4
+zabbix: zabbix
+domain1: test.com 
+domain2: 
+worker_count: 4
+worker_connections: 2048
+expire_values: 30d
+gzip_compression: "on"
+keepalive_timeout: 60
+

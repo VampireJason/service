@@ -1,0 +1,8 @@
+---
+
+- hosts: all
+  user: ncadmin
+  sudo: yes
+  tasks:
+  - name: ensure java is installed
+    action: yum name=java-1.7.0-openjdk.x86_64 state=present

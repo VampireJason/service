@@ -1,0 +1,5 @@
+[alt]
+name=alt
+baseurl=http://centos.alt.ru/repository/centos/6/x86_64/
+enabled=1
+gpgcheck=0

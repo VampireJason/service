@@ -1,0 +1,229 @@
+################### Main MySQL config area
+
+# Note UPDATE section where you should make changes for each server
+
+# History
+# 2012-10-15    SM      Update formatting for 5.5
+# 2012-10-27    SM      Added many Percona features from Percona manual
+
+# Comments / Notes
+
+## Use loose_ to not die fatally if parma is wrong ?  Good for 5.5/Percona ?
+
+[mysqld_safe]
+# Nothing here for now
+
+[mysqld]
+
+###### General Configuration ######
+
+user =                  mysql           # User to run as
+pid_file =              mysql.pid       # Set PID file, otherwise uses hostname
+skip_symbolic_links                     # NC Don't follow sym links for security - turn on later if adding disks/partitions
+sysdate_is_now                          # Make sysdate behave like now() and be the same for replication
+character_set_server =          utf8    # Set default server character set
+collation_server =              utf8_unicode_ci         # Set default server collation
+default_storage_engine =        INNODB
+event_scheduler =               DISABLED        # Deafult is off.  NC Set Disabled so cannot be started at run-time
+core_file                               # Dump core if crashes, Default is TRUE
+datadir =                       /var/lib/mysql/data     # Set data directory to ./data so we don't have lost+found in main dir
+#debug =                                # Debug options
+
+###### Connections & Networking ######
+
+bind_address =          127.0.0.1       # Listen IP Address, usually 0.0.0.0 or 127.0.0.1 - only ONE address can be used !
+port =                  3306            # Listen port
+back_log =              1024            # Default = 50, Percona says thousands okay
+max_connections =       1024            # Default = 100, NC: Small = 50, Med = 256, Large = 1024
+max_user_connections  = 1000
+max_connect_errors =    10000           # Default = 10, Percona says use large to avoid block
+skip_name_resolve                       # Skip DNS name lookup or else will have problems if DNS is down
+max_allowed_packet =    16M             # Enlarged dynamically, per connection. Max blob and backup size. See net_buffer-length
+
+#skip_networking                        # Set skip-networking to disable networking, but if you want to lock out users,
+                                        #  you also have to rename local unix socket
+socket =                /var/lib/mysql/mysql.sock       # Local socket - Default is mysql dir, may not be readable by user
+                                                        #  Rename to lock out users, such as mysql.lockout.sock
+
+### Security Items ###
+
+old_passwords =                 Off     # Don't allow old passowrds
+secure_auth                             # Force secure authentication - won't allow login by users with old passwords
+safe_user_create                        # Don't allow user creation via GRANT. This means users have to be directly created
+local_infile =                  0        # Don't allow LOAD DATA LOCAL for security reasons
+# secure_file_priv =            path    # Limits LOAD_FILE() function and the LOAD DATA and SELECT ... INTO OUTFILE
+
+### Other General Items ###
+
+sql_mode =                      "TRADITIONAL,NO_ENGINE_SUBSTITUTION"    # Set the SQL mode, No spaces allowed between options
+tmpdir =                        /tmp    # Note this directory must exist and should be owned by mysql user
+
+table_open_cache =              1000    # NC Set to 1000 for safety for now, for OS 1024 limit
+binlog_cache_size =             64K     # This buffer is allocated PER CONNECTION on first update statement in transaction
+sort_buffer_size =              2M
+join_buffer_size =              8M
+thread_cache_size =             256     # NC Raised from 32 as low overhead
+query_cache_size =              0        # Can also turn off as too much contention at load, check if useful
+query_cache_limit =             2M      # Per query limit
+thread_stack =                  192K
+net_buffer_length =             16K     # Network buffer allocated for each new thread - PER THREAD
+transaction_isolation =         REPEATABLE-READ         # NC, NEVER change this without approval
+max_heap_table_size =           32M     # Maximum allowed size for a single HEAP (in memory) & TEMP table. Using Percona 32M.
+tmp_table_size =                32M     # Should match max_heap_table_size, above
+
+query_response_time_stats =     On      # Percona feature to turn on query response stats
+
+###### Logging Section ######
+
+log_error =                     error.log       # Main error log, FLUSH LOGS may rename (not clear)
+                                                                # From 5.1.21 and later, can add a syslog tag
+#syslog_tag =                   mysql           # NC Not supported, even in 5.1.33, so off for now
+#general_log =                  query.log       # Default off, uses LOTS of disk space
+log_warnings =                  1               # Warnings to log
+
+slow_query_log                                  # Turn on
+slow_query_log_file =           slow.log
+long_query_time =               1.0             # Can use decimals like 0.25, in Percona 0 means log ALL queries
+log_slow_verbosity =            Full            # Many options, full for all; see docs
+slow_query_log_timestamp_always =       On      # Always timestamp
+slow_query_log_timestamp_precision =    Microsecond
+
+log_slow_admin_statements                       # Log slow admin cmds, e.g. OPTIMIZE TABLE, ANALYZE TABLE, to slow query log
+log_slow_slave_statements =     Off             # Usually don't want so we have only real queries
+
+#min_examined_row_limit =       0                # Queries which examine fewer than number not logged, useful for perf check
+
+#log_slow_filter =                              # Can turn on dynamically
+#log_slow_rate_type =                   Session # Can capture a whole session
+#log_slow_rate_limit =                  0        # Allows sampling of session/queries, every # is logged
+
+log_queries_not_using_indexes = FALSE           # NC Note this can create large logs if there are logs of no-index queries
+log_output =                    FILE            # For several of the logs, including general & slow ?
+
+###### BinLog, Index & Replication Options ######
+
+sync_binlog =                   1       # Set to 1 on fast disks, 100 on slow disks
+server_id =                     10      # Always update in master/slave system
+
+log_bin =                       mysql-bin
+binlog_format =                 STATEMENT       # May change in 5.5 to MIXED
+max_binlog_size =               256M
+expire_logs_days =              7
+log_bin_index =                 mysql-bin.index # Set binlog index file name - otherwise will us host name
+master_info_file =              master.info     # Set master.info file name - otherwise will us host name
+relay_log_info_file =           relay-log.info  # Set Relay Log Info file name - otherwise will us host name
+relay_log =                     relay-bin       # Set Relay Log name in config - otherwise will us host name
+relay_log_index =               relay-bin.index # Set Relay Log Index file name - otherwise will us host name
+max_relay_log_size =            0                # If 0, max_binlog_size applies to relay logs as well
+log_slave_updates                               # Log updates from master, should be on if slave can be master
+
+sync_master_info =              1               # fSync master info
+#sync_relay_log =               1               # fSync relay logs
+#sync_relay_log_info =          1               # fSync relay log info
+
+# PERCONA
+innodb_recovery_update_relay_log =0             # Write position in log for safety, but ALL tables must be Innodb!
+
+###### SLAVE SECTION ######
+
+#read_only                                      # Turn off for master or if have to write
+report_host =                   set_to_hostname # Set to the real hostname of slave
+#slave_compressed_protocol                      # Use if slave over Internet, not LAN
+
+skip_slave_start                                # Always skip auto start
+slave_exec_mode =               STRICT          # STRICT Errors on duplicate keys, etc.
+slave_net_timeout =             60              # Pecona says set 1min or less
+
+###### MyISAM Section ######
+
+key_buffer_size =               64M             # For indexes, never more than 30% RAM, min 8M
+delay_key_write =               Off             # Must set off due to corruption issues; default on
+read_buffer_size =              256K
+read_rnd_buffer_size =          1M
+bulk_insert_buffer_size =       64M             # NC Set to match key buffer; don't set larger than key buffer
+myisam_sort_buffer_size =       8M
+myisam_max_sort_file_size =     1G              # Large for recovery perf, watch space available on small disks, set 1G
+myisam_repair_threads =         4               # Set about # of cores
+myisam_recover =                BACKUP,FORCE    # Percona recommended
+#low_priority_updates                           # NC Only used on slaves for high peformance, only if using MyISAM
+myisam_use_mmap =               0
+concurrent_insert =             2               # Percona recommended if lots of inserts/deletes with holes
+
+###### INNODB Section ######
+
+performance_schema
+innodb_buffer_pool_size =    {{ innodb_buffer_pool_size | default ('64M') }}        # Main buffer, set to 60-80% of RAM (but always leave 512M free)
+innodb_flush_log_at_trx_commit =        1       # 1 for battery cache RAID, 2 for slow disks/RAID
+
+innodb_data_file_path = ibdata1:10M:autoextend:max:500M         # Default ibdata1:10M:autoextend; match existing files
+innodb_thread_concurrency =             8       # NC Generally 2xCores or less + # of disks, 8-10 for 4 core system
+
+#innodb_data_home_dir =         <directory>/    # Must have final / as this must be a directory, Default is ./
+innodb_file_per_table = 1                       # Don't use O_DIRECT if NOT file_per_table on ext3
+innodb_status_file =                    On      # Write INNODB STATUS file in data dir
+innodb_additional_mem_pool_size =       8M
+innodb_force_recovery =                 0
+innodb_fast_shutdown =                  0        # We may change to On later if okay, but log resize issues
+innodb_log_buffer_size =                16M     # NC Up from 8 to 16M for 5.5, up to 32M if have RAM, see innodb_os_log_written for 1 sec
+innodb_rollback_on_timeout =            On      # NC Seems better to have this on and roll whole transaction back
+
+innodb_log_file_size =                  128M    # NC Must match actual size; Use 1 hour of innodb_os_log_written
+innodb_log_files_in_group =             2       # 2 is standard/default
+#innodb_log_group_home_dir                      # Location of the InnoDB log files. Default is the MySQL datadir.
+
+innodb_max_dirty_pages_pct =            90
+innodb_flush_method =                   ALL_O_DIRECT    # Don't use ALL/O_DIRECT if not file_per_table on ext3
+innodb_lock_wait_timeout =              50
+innodb_support_xa =                     On      # To make sure binlog & innodb log are in sync
+innodb_open_files =                     1000    # Set to hold all tables at once
+
+innodb_stats_on_metadata =              Off     # Turn off, so PHPMyAdmin, etc. don't do this via SHOW INDEXES, etc.
+innodb =                                FORCE   # Don't start without it (or if it errors)
+innodb_io_capacity =                    200     # Can use > 200 if caching RAID (how high?).  Default 200; use 100 for SATA
+innodb_buffer_pool_instances =          8       # Percona recommends 8, only used if buffer > 1GB
+innodb_old_blocks_time =                1000    # Percona helps with LRU management
+innodb_read_io_threads =                4       # Default 4
+innodb_write_io_threads =               4       # Default 4
+innodb_flush_neighbor_pages =           Cont    # Area is default, but Cont better on cached RAID, improves seq IO
+innodb_adaptive_flushing =              1       # Default is on for Percona, off for Innodb
+innodb_adaptive_flushing_method =       Estimate        # New in Percona 5.5
+
+innodb_lazy_drop_table =                1       # Doesn't freeze server when dropping with large buffer
+
+innodb_corrupt_table_action =           Warn    # Don't crash on corrupt table, just warn
+innodb_buffer_pool_restore_at_startup = 60      # Dump every 1 min, load on start (which can be slow)
+innodb_fake_changes =                   Off     # Can be turned on with tools, to peed up Slave cache read before execute
+
+log_warnings_suppress =                         # Set to 1592 to remove Unsafe for Replication errors
+query_cache_strip_comments =            On      # Make qcache hit more
+expand_fast_index_creation =            On      # Percona optimization on indexing, uses /tmp space
+userstat =                      On      # Start Percona stats
+
+
+##########  End of DB Server Config ##########
+
+#################################################
+#################################################
+### Other clients, mysqlq, dump, etc. section ###
+#################################################
+#################################################
+
+[mysqldump]
+quick
+max_allowed_packet =                    16M
+
+[myisamchk]
+key_buffer_size =                       256M
+sort_buffer_size =                      256M
+read_buffer =                           2M
+write_buffer =                          2M
+
+# Should only use client section on server if will connect using MySQL's Linux user
+[client]
+
+# Never set PW here unless needed for scripts and only if file is carefully protected - better to use /home/user/my.conf
+# Use password keyword here to force prompt of password
+
+password
+port            =                       3306
+socket          =                       /var/lib/mysql/mysql.sock

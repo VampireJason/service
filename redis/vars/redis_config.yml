@@ -1,0 +1,9 @@
+---
+# for mysql configuration
+
+redis_size: 5120
+vgname: domuvg
+lvname: redis
+fstype: ext4
+devname: /dev/domuvg/redis
+

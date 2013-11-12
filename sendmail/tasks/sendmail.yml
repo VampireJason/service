@@ -1,0 +1,14 @@
+---
+
+- hosts: all
+  user: ncadmin
+  sudo: yes
+  tasks:
+  - name: ensure install sendmail-cf
+    action: yum name=sendmail-cf state=present
+  - name: ensure sendmail configuration
+    action: command sed -i 's/#Dj\\$\w.Foo.COM/Dj$HOSTNAME.redatoms.com/g' /etc/mail/sendmail.cf
+    notify: restart sendmail
+  handlers:
+  - name: restart sendmail
+    action: service name=sendmail state=restarted
